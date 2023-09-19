@@ -1,5 +1,5 @@
 // game.mjs
-import { generateDeck, shuffle, deal, draw } from '../cards.mjs';
+import { generateDeck, shuffle, deal, draw } from './cards.mjs';
 import { question } from 'readline-sync';
 import clear from 'clear';
 import { readFile } from 'fs';
