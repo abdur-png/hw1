@@ -92,6 +92,7 @@ function playerTurn() {
             const [newDeck, card] = draw(gameState.deck);
             gameState.deck = newDeck;
             drawnCards.push(card[0]);
+            // drawnCards = [card[0], ...drawnCards];
             if (card[0].rank === gameState.nextPlay.rank || card[0].suit === gameState.nextPlay.suit || card[0].rank === '8') {
                 playable = true;
                 gameState.discardPile.push(card[0]);
