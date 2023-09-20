@@ -10,6 +10,10 @@ if (predefinedGameState) {
     readFile(predefinedGameState, 'utf8', (err, data) => {
         if (err) throw err;
         gameState = JSON.parse(data);
+        displayGameState();
+        playerTurn();
+        computerTurn();
+
     });
 }
 else {
@@ -31,8 +35,13 @@ else {
         discardPile: discardPile,
         nextPlay: starterCard
     };
+    displayGameState();
+    playerTurn();
+    computerTurn();
+
 }
 function displayGameState() {
+    
     clear();
     console.log("              CR🤪ZY 8's");
     console.log("-----------------------------------------------");
@@ -91,8 +100,18 @@ function playerTurn() {
         console.log(`Cards drawn: ${drawnCards.map(card => card.rank + card.suit).join(', ')}`);
         if (playable) {
             console.log(`Card played: ${gameState.nextPlay.rank}${gameState.nextPlay.suit}`);
+            
         }
         question("Press ENTER to continue");
+        if (gameState.nextPlay.rank === '8') {
+            console.log("CRAZY EIGHTS! You played an 8 - choose a suit");
+            console.log("1: ♠️\n2: ❤️\n3: ♣️\n4: ♦️");
+            const suitChoice = parseInt(question("> "));
+            const suits = ["♠️", "❤️", "♣️", "♦️"];
+            gameState.nextPlay = { rank: '8', suit: suits[suitChoice - 1] };
+        }
+
+        // playerTurn();
     }
 }
 
@@ -129,6 +148,6 @@ function computerTurn() {
     }
 }
 
-displayGameState();
-playerTurn();
-computerTurn();
+// displayGameState();
+// playerTurn();
+// computerTurn();
