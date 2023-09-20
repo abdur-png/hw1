@@ -1,134 +1,101 @@
-// game.mjs
-import { generateDeck, shuffle, deal, draw } from '../lib/cards.mjs';
-import { question } from 'readline-sync';
-import clear from 'clear';
-import { readFile } from 'fs';
+// cards.mjs
+const suits = {SPADES: '♠️', HEARTS: '❤️', CLUBS: '♣️', DIAMONDS: '♦️'};
+const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
-const predefinedGameState = process.argv[2];
-let gameState;
-if (predefinedGameState) {
-    readFile(predefinedGameState, 'utf8', (err, data) => {
-        if (err) throw err;
-        gameState = JSON.parse(data);
-    });
-}
-else {
-    const deck = shuffle(generateDeck());
-    const { deck: newDeck, hands: [playerHand] } = deal(deck);
-    const { deck: finalDeck, hands: [computerHand] } = deal(newDeck);
-    
-    let discardPile = [];
-    let starterCard = draw(finalDeck)[1][0];
-    while (starterCard.rank === '8') {
-        discardPile.push(starterCard);
-        starterCard = draw(finalDeck)[1][0];
+export function range(...argc){
+    let start, end, inc;
+    switch (argc.length){
+        case 1:
+            [end] = argc;
+            start = 0
+            inc = 1
+            break;
+        case 2:
+            [start, end] = argc;
+            inc = 1;
+            break;
+        case 3:
+            [start, end, inc] = argc;
+            break;
+        default:
+            throw new Error("Invalid number of arguments provided to range function.");
     }
-    discardPile.push(starterCard);
-    gameState = {
-        deck: finalDeck,
-        playerHand: playerHand,
-        computerHand: computerHand,
-        discardPile: discardPile,
-        nextPlay: starterCard
-    };
-}
-function displayGameState() {
-    clear();
-    console.log("              CR🤪ZY 8's");
-    console.log("-----------------------------------------------");
-    console.log(`Next suit/rank to play: ➡️  ${gameState.nextPlay.rank}${gameState.nextPlay.suit}  ⬅️`);
-    console.log("-----------------------------------------------");
-    console.log(`Top of discard pile: ${gameState.discardPile[gameState.discardPile.length - 1].rank}${gameState.discardPile[gameState.discardPile.length - 1].suit}`);
-    console.log(`Number of cards left in deck: ${gameState.deck.length}`);
-    console.log("-----------------------------------------------");
-    console.log(`🤖✋ (computer hand): ${gameState.computerHand.map(card => card.rank + card.suit).join('  ')}`);
-    console.log(`😊✋ (player hand): ${gameState.playerHand.map(card => card.rank + card.suit).join('  ')}`);
-    console.log("-----------------------------------------------");
-}
 
-// 4. Player's Turn
-function playerTurn() {
-    const playableCards = gameState.playerHand.filter(card => 
-        card.rank === gameState.nextPlay.rank || 
-        card.suit === gameState.nextPlay.suit || 
-        card.rank === '8'
-    );
-
-    if (playableCards.length > 0) {
-        console.log("😊 Player's turn...");
-        console.log("Enter the number of the card you would like to play");
-        playableCards.forEach((card, index) => {
-            console.log(`${index + 1}: ${card.rank}${card.suit}`);
-        });
-        const choice = parseInt(question("> "));
-        const playedCard = gameState.playerHand.splice(gameState.playerHand.indexOf(playableCards[choice - 1]), 1)[0];
-        gameState.discardPile.push(playedCard);
-        
-        if (playedCard.rank === '8') {
-            console.log("CRAZY EIGHTS! You played an 8 - choose a suit");
-            console.log("1: ♠️\n2: ❤️\n3: ♣️\n4: ♦️");
-            const suitChoice = parseInt(question("> "));
-            const suits = ["♠️", "❤️", "♣️", "♦️"];
-            gameState.nextPlay = { rank: '8', suit: suits[suitChoice - 1] };
-        } else {
-            gameState.nextPlay = playedCard;
-        }
-    } else {
-        console.log(`😊 Player's turn...`);
-        console.log(`😔 You have no playable cards`);
-        let drawnCards = [];
-        let playable = false;
-        while (!playable && gameState.deck.length) {
-            const [newDeck, card] = draw(gameState.deck);
-            gameState.deck = newDeck;
-            drawnCards.push(card[0]);
-            if (card[0].rank === gameState.nextPlay.rank || card[0].suit === gameState.nextPlay.suit || card[0].rank === '8') {
-                playable = true;
-                gameState.discardPile.push(card[0]);
-                gameState.nextPlay = card[0];
-            }
-        }
-        console.log(`Cards drawn: ${drawnCards.map(card => card.rank + card.suit).join(', ')}`);
-        if (playable) {
-            console.log(`Card played: ${gameState.nextPlay.rank}${gameState.nextPlay.suit}`);
-        }
-        question("Press ENTER to continue");
+    const result = [];
+    for (let i = start; i < end; i += inc) {
+        result.push(i);
     }
+    return result;
+
+}
+export function generateDeck(){
+    return Object.values(suits).flatMap(suit => ranks.map(rank => ({ suit, rank })));
 }
 
-// 5. Computer's Turn
-function computerTurn() {
-    const playableCardIndex = gameState.computerHand.findIndex(card => 
-        card.rank === gameState.nextPlay.rank || 
-        card.suit === gameState.nextPlay.suit || 
-        card.rank === '8'
-    );
-
-    if (playableCardIndex !== -1) {
-        const playedCard = gameState.computerHand.splice(playableCardIndex, 1)[0];
-        gameState.discardPile.push(playedCard);
-        
-        if (playedCard.rank === '8') {
-            // For simplicity, let's choose the most common suit in the computer's hand
-            const suitCounts = gameState.computerHand.reduce((acc, card) => {
-                acc[card.suit] = (acc[card.suit] || 0) + 1;
-                return acc;
-            }, {});
-            const mostCommonSuit = Object.keys(suitCounts).reduce((a, b) => suitCounts[a] > suitCounts[b] ? a : b);
-            gameState.nextPlay = { rank: '8', suit: mostCommonSuit };
-        } else {
-            gameState.nextPlay = playedCard;
-        }
-        
-        console.log(`🤖 Computer's turn...`);
-        console.log(`Card played: ${playedCard.rank}${playedCard.suit}`);
-    } else {
-        console.log(`🤖 Computer's turn...`);
-        console.log(`😔 No playable cards`);
-        // ... draw cards until a playable one is found or deck is empty
+export function shuffle(deck){
+    const shuffled = [...deck];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
+    return shuffled;
+    /*
+    The shuffle algorithm used here is known as the Fisher-Yates (or Knuth) shuffle. 
+    The basic idea is to iterate over the array from the last element to the first, 
+    and for each element, swap it with a randomly chosen element that comes before it (or itself). 
+    This ensures that each permutation of the array is equally likely.
+    */
+}
+export function draw(cardsArray, n = 1) {
+    return [cardsArray.slice(n), cardsArray.slice(0, n)];
 }
 
-displayGameState();
-playerTurn();
-computerTurn();
+export function deal(cardsArray, numHands = 2, cardsPerHand = 5) {
+    const hands = [];
+    for (let i = 0; i < numHands; i++) {
+        const [newDeck, drawnCards] = draw(cardsArray, cardsPerHand);
+        cardsArray = newDeck;
+        hands.push(drawnCards);
+    }
+    return { deck: cardsArray, hands };
+}
+
+export function handToString(hand, sep = '  ', numbers = false){
+
+    return hand.map((card, index) => `${numbers ? `${index + 1}: ` : ''}${card.rank}${card.suit}`).join(sep);
+}
+export function matchesAnyProperty(obj, matchObj) {
+    // Iterate over the keys in matchObj
+    for (let key in matchObj) {
+        // Check if the key exists in obj and if the values match
+        if (obj.hasOwnProperty(key) && obj[key] === matchObj[key]) {
+            return true; // Return true if a match is found
+        }
+    }
+    return false; // Return false if no matches are found
+}
+
+export function drawUntilPlayable(deck, matchObj) {
+    const drawnCards = [];
+    let found = false;
+
+    // Start drawing from the end of the deck
+    while (deck.length && !found) {
+        const card = deck.pop();
+        drawnCards.push(card); // Add the drawn card to the beginning of the drawnCards array
+
+        // Check if the card matches the criteria
+        if (card.rank === '8' || matchesAnyProperty(card, matchObj)) {
+            found = true;
+        }
+    }
+
+    // If no match is found, return the original deck in reverse order
+    if (!found) {
+        return [[], drawnCards.reverse()];
+    }
+
+    return [deck, drawnCards];
+}
+
+
