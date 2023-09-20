@@ -1,5 +1,5 @@
 // game.mjs
-import { generateDeck, shuffle, deal, draw } from './cards.mjs';
+import { generateDeck, shuffle, deal, draw } from '../lib/cards.mjs';
 import { question } from 'readline-sync';
 import clear from 'clear';
 import { readFile } from 'fs';
@@ -14,8 +14,8 @@ if (predefinedGameState) {
 }
 else {
     const deck = shuffle(generateDeck());
-    const [newDeck, playerHand] = deal(deck);
-    const [finalDeck, computerHand] = deal(newDeck);
+    const { deck: newDeck, hands: [playerHand] } = deal(deck);
+    const { deck: finalDeck, hands: [computerHand] } = deal(newDeck);
     
     let discardPile = [];
     let starterCard = draw(finalDeck)[1][0];
@@ -33,6 +33,7 @@ else {
     };
 }
 function displayGameState() {
+    clear();
     console.log("              CR🤪ZY 8's");
     console.log("-----------------------------------------------");
     console.log(`Next suit/rank to play: ➡️  ${gameState.nextPlay.rank}${gameState.nextPlay.suit}  ⬅️`);
@@ -47,32 +48,51 @@ function displayGameState() {
 
 // 4. Player's Turn
 function playerTurn() {
-    const playableCardIndex = gameState.playerHand.findIndex(card => 
+    const playableCards = gameState.playerHand.filter(card => 
         card.rank === gameState.nextPlay.rank || 
         card.suit === gameState.nextPlay.suit || 
         card.rank === '8'
     );
 
-    if (playableCardIndex !== -1) {
-        const playedCard = gameState.playerHand.splice(playableCardIndex, 1)[0];
+    if (playableCards.length > 0) {
+        console.log("😊 Player's turn...");
+        console.log("Enter the number of the card you would like to play");
+        playableCards.forEach((card, index) => {
+            console.log(`${index + 1}: ${card.rank}${card.suit}`);
+        });
+        const choice = parseInt(question("> "));
+        const playedCard = gameState.playerHand.splice(gameState.playerHand.indexOf(playableCards[choice - 1]), 1)[0];
         gameState.discardPile.push(playedCard);
         
         if (playedCard.rank === '8') {
             console.log("CRAZY EIGHTS! You played an 8 - choose a suit");
             console.log("1: ♠️\n2: ❤️\n3: ♣️\n4: ♦️");
-            const choice = parseInt(question("> "));
+            const suitChoice = parseInt(question("> "));
             const suits = ["♠️", "❤️", "♣️", "♦️"];
-            gameState.nextPlay = { rank: '8', suit: suits[choice - 1] };
+            gameState.nextPlay = { rank: '8', suit: suits[suitChoice - 1] };
         } else {
             gameState.nextPlay = playedCard;
         }
-        
-        console.log(`😊 Player's turn...`);
-        console.log(`Card played: ${playedCard.rank}${playedCard.suit}`);
     } else {
         console.log(`😊 Player's turn...`);
         console.log(`😔 You have no playable cards`);
-        // ... draw cards until a playable one is found or deck is empty
+        let drawnCards = [];
+        let playable = false;
+        while (!playable && gameState.deck.length) {
+            const [newDeck, card] = draw(gameState.deck);
+            gameState.deck = newDeck;
+            drawnCards.push(card[0]);
+            if (card[0].rank === gameState.nextPlay.rank || card[0].suit === gameState.nextPlay.suit || card[0].rank === '8') {
+                playable = true;
+                gameState.discardPile.push(card[0]);
+                gameState.nextPlay = card[0];
+            }
+        }
+        console.log(`Cards drawn: ${drawnCards.map(card => card.rank + card.suit).join(', ')}`);
+        if (playable) {
+            console.log(`Card played: ${gameState.nextPlay.rank}${gameState.nextPlay.suit}`);
+        }
+        question("Press ENTER to continue");
     }
 }
 
